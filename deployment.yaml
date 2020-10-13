@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-boot-example
+  labels:
+    app: spring-boot-example
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-boot-example
+  template:
+    metadata:
+      labels:
+        app: spring-boot-example
+    spec:
+      serviceAccountName: cloud-sql-sa
+      containers:
+        - image: gcr.io/<PROJECT-ID>/spring-boot-example:0.0.1
+          name: spring-boot-example-container
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              port: 8080
+              path: /api/status
+            initialDelaySeconds: 30
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              port: 8080
+              path: /api/status
+            initialDelaySeconds: 30
+            failureThreshold: 5
+        - image: gcr.io/cloudsql-docker/gce-proxy:1.18.0
+          name: cloud-sql-proxy
+          command:
+            - "/cloud_sql_proxy"
+            - "-instances=<PROJECT-ID>:<ZONE>:<INSTANCE-NAME>=tcp:3306"
+          securityContext:
+            runAsNonRoot: true
